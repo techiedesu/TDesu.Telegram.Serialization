@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/TDesu.Telegram.Serialization/TDesu.Telegram.Serialization.fsproj" />
+  <Project Path="tests/TDesu.Telegram.Serialization.Tests/TDesu.Telegram.Serialization.Tests.fsproj" />
+</Solution>

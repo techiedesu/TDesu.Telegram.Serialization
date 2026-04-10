@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <RootNamespace>TDesu.Serialization.Tests</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="TestHelpers.fs" />
+        <Compile Include="Serialization\PrimitiveTests.fs" />
+        <Compile Include="Serialization\VectorTests.fs" />
+        <Compile Include="Serialization\TlBuilderTests.fs" />
+        <Compile Include="Serialization\TlUserTests.fs" />
+        <Compile Include="Serialization\TlMessageTests.fs" />
+        <Compile Include="Serialization\TlChatTests.fs" />
+        <Compile Include="Serialization\TlRoundTripTests.fs" />
+        <Compile Include="Serialization\TlParsersTests.fs" />
+        <Compile Include="Serialization\TypedResponsesTests.fs" />
+        <Compile Include="Serialization\ResponseEnvelopeTests.fs" />
+        <Compile Include="Serialization\WriteDefaultsTests.fs" />
+        <Compile Include="Serialization\GeneratedRoundTripTests.g.fs" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\TDesu.Telegram.Serialization\TDesu.Telegram.Serialization.fsproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="NUnit" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NUnit3TestAdapter" />
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="FsCheck" />
+        <PackageReference Include="FsCheck.NUnit" />
+    </ItemGroup>
+</Project>
