@@ -30,12 +30,9 @@
         <Compile Include="GeneratedTlTypes.g.fs" />
         <Compile Include="GeneratedTlRequests.g.fs" />
         <Compile Include="GeneratedTlWriters.g.fs" />
-        <Compile Include="TlParsers.fs" />
         <Compile Include="TlWriters.fs" />
         <Compile Include="GeneratedCoverageValidator.g.fs" />
         <Compile Include="GeneratedReturnTypes.g.fs" />
-        <Compile Include="TypedResponses.fs" />
-        <Compile Include="WriteDefaults.fs" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="TDesu.FSharp" />

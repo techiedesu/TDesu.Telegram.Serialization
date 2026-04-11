@@ -13,10 +13,6 @@
         <Compile Include="Serialization\TlMessageTests.fs" />
         <Compile Include="Serialization\TlChatTests.fs" />
         <Compile Include="Serialization\TlRoundTripTests.fs" />
-        <Compile Include="Serialization\TlParsersTests.fs" />
-        <Compile Include="Serialization\TypedResponsesTests.fs" />
-        <Compile Include="Serialization\ResponseEnvelopeTests.fs" />
-        <Compile Include="Serialization\WriteDefaultsTests.fs" />
         <Compile Include="Serialization\GeneratedRoundTripTests.g.fs" />
     </ItemGroup>
     <ItemGroup>

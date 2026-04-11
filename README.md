@@ -3,9 +3,14 @@
 [![NuGet](https://img.shields.io/nuget/v/TDesu.Telegram.Serialization.svg)](https://www.nuget.org/packages/TDesu.Telegram.Serialization)
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](https://unlicense.org)
 
-Binary serialization library for Telegram's [TL (Type Language)](https://core.telegram.org/mtproto/TL-tl) wire format. Zero-copy pooled buffers, computation expression builder, and typed parsers.
+Binary serialization library for Telegram's [TL (Type Language)](https://core.telegram.org/mtproto/TL-tl) wire format. Zero-copy pooled buffers, computation expression builder, and generated TL types for the pinned schema layer.
 
 No reflection. No code generation at runtime. Just structs, spans, and `ArrayPool`.
+
+> **0.2.0 (breaking)** removed the project-specific helpers that shipped in 0.1.0
+> (`TlParsers`, `WriteDefaults`, `TypedResponses`, `ResponseEnvelopes`). See
+> [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the migration list. Future releases
+> will continue narrowing the scope to pure generic primitives.
 
 ## Install
 
@@ -113,64 +118,20 @@ let data = tl {
 
 Custom operations: `cid`, `int32`, `int64`, `double`, `string`, `bytes`, `bool`, `raw`, `vector`, `emptyVector`, `flags`, `flagsEnd`, `flagBit`, `optInt32`, `optInt64`, `optString`, `optBool`, `optRaw`, `optCid`, `write`.
 
-## Typed parsers
+## Vector header
 
-Stateless parsing functions for common Telegram request types:
-
-```fsharp
-open TDesu.Serialization
-
-// Parse InputPeer from raw bytes
-let peer = TlParsers.readInputPeer reader
-match peer with
-| Self -> "me"
-| User(userId, _) -> $"user {userId}"
-| Chat(chatId) -> $"chat {chatId}"
-| Channel(channelId, _) -> $"channel {channelId}"
-| PeerEmpty -> "empty"
-| PeerUnknown cid -> $"unknown 0x{cid:X}"
-
-// Parse full request bodies (via generated Deserialize)
-let msg = TlParsers.readSendMessage body
-printfn "To: %A, Text: %s" msg.Peer msg.Message
-
-let history = TlParsers.readGetHistory body
-printfn "Peer: %A, Limit: %d" history.Peer history.Limit
-
-let media = TlParsers.readSendMedia body
-let file = TlParsers.readInputFile reader
-let reply = TlParsers.readInputReplyTo reader
-```
-
-## Response envelopes
-
-Pre-built helpers for common TL response wrappers. Prevent field-order bugs in frequently used types.
+Use `TlWriters.writeVectorHeader` when emitting a TL `Vector<T>` payload by hand
+instead of constructing the constructor + count yourself.
 
 ```fsharp
-// Empty responses
-let data = emptyUpdates date seq
-let data = emptyMessages ()
-
-// With content (each lambda writes a vector)
-let data = updatesResponse writeUpdates writeUsers writeChats date seq
-let data = singleUpdateResponse writeOneUpdate date seq
-let data = messagesSliceResponse count writeMessages writeTopics writeChats writeUsers
-
-// Other envelopes
-let data = dialogsResponse writeDialogs writeMessages writeChats writeUsers
-let data = channelMessagesResponse pts count writeMessages writeChats writeUsers
-let data = authAuthorizationResponse writeUser
-let data = contactsFoundResponse writeMyResults writeResults writeChats writeUsers
-let data = rpcError 400 "PEER_ID_INVALID"
-
-// Zero-copy variants (write directly to existing buffer)
-writeUpdatesTo buffer writeUpdates writeUsers writeChats date seq
-writeMessagesTo buffer writeMessages writeTopics writeChats writeUsers
+TlWriters.writeVectorHeader w 3       // writes 0x1cb5c415u + count(3)
+for item in items do writeItem w item
 ```
 
 ## Shared types
 
-Domain types used across serialization boundaries:
+Domain types used by the generated TL artifacts (and re-exposed for consumers that
+want to construct them directly):
 
 ```fsharp
 type PeerType = PeerTypeUser | PeerTypeChat | PeerTypeChannel
@@ -188,27 +149,10 @@ type MediaInfo =
     | Empty
 ```
 
-## Write defaults
-
-Default record values for generated writer types. Use `{ defaultWriteUser with id = 42L; firstName = Some "Alice" }` to construct.
-
-```fsharp
-let user = { defaultWriteUser with id = 42L; firstName = Some "Alice" }
-let msg = { defaultWriteMessage with id = 1; message = "hello"; date = now }
-let dialog = { defaultWriteDialog with peer = WritePeer.PeerUser(42L); topMessage = 1 }
-
-// Converters
-let writePeer = writePeerFromType PeerTypeUser 42L
-let replyTo = writeReplyTo (Some 10)
-let media = writeMediaFromInfo (Some(MediaInfo.Photo(1L, 2L, 3, 640, 480, 50000)))
-let photo = writePhotoFromTuple (Some(100L, 200L, 2))
-let status = writeStatusFromTlStatus (Some(UserStatus.Online 1700000000))
-let chatPhoto = writeChatPhotoFromTuple (Some(100L, 200L, 2))
-```
-
 ## Generated code
 
-The library includes generated code from TL schemas (produced by [td-tl-gen](https://github.com/techiedesu/TDesu.Telegram.MTProto)):
+The library currently includes generated code from a pinned TL schema layer
+(produced by [td-tl-gen](https://github.com/techiedesu/TDesu.Telegram.MTProto)):
 
 | File | Description |
 |------|-------------|
@@ -219,6 +163,10 @@ The library includes generated code from TL schemas (produced by [td-tl-gen](htt
 | `GeneratedReturnTypes.g.fs` | CID -> return type mapping |
 | `GeneratedCoverageValidator.g.fs` | Handler coverage checker |
 | `GeneratedLayerAliases.g.fs` | Layer 223 <-> 216 CID aliases |
+
+These artifacts will move out of this package in a future release. Plan to either
+generate them yourself via `td-tl-gen --overrides your-config.toml` or depend on a
+forthcoming `TDesu.Telegram.Serialization.Schema` package.
 
 ## Dependencies
 
