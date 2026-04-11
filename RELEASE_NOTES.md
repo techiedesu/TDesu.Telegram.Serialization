@@ -1,3 +1,63 @@
+## 0.3.0
+
+**Breaking changes** — removes the schema-pinned generated code that 0.2.0
+shipped as a transitional layer. The library is now a pure runtime: binary
+buffers, the `tl {}` computation expression, and a vector header writer.
+Nothing in the package depends on a specific Telegram TL schema.
+
+### Removed
+
+- **`Generated*.g.fs`** (~22 000 LOC) — the entire pinned schema artifact set
+  that 0.2.0 included as a transitional compatibility layer. These were
+  always project-specific (a particular whitelist + extras + dual-layer policy)
+  dressed up as a generic library.
+  - `GeneratedCid.g.fs` — constructor ID literals
+  - `GeneratedTlTypes.g.fs` — TlUser / TlMessage / TlChat per-layer serializers
+    (the hand-written half) and request types (the auto-generated half)
+  - `GeneratedTlRequests.g.fs` — Request DUs (`MessagesSendMessage`, etc.)
+  - `GeneratedTlWriters.g.fs` — Write DUs (`WritePhoneCall`, `WriteUpdate`, etc.)
+  - `GeneratedCoverageValidator.g.fs`
+  - `GeneratedReturnTypes.g.fs`
+  - `GeneratedLayerAliases.g.fs`
+- **`TlSharedTypes.fs`** — `PeerType`, `MediaInfo`, `DocumentAttribute`,
+  `UserStatus`. These were referenced by the hand-written part of
+  `GeneratedTlTypes.fs`, so they're entangled with the generated artifacts and
+  follow them out.
+- Tests for the removed types (`TlMessageTests`, `TlUserTests`, `TlChatTests`,
+  `TlRoundTripTests`, `GeneratedRoundTripTests`).
+
+### Migration
+
+Run `td-tl-gen` (0.1.0+) against your own TL schema and overrides TOML to
+produce the artifacts you need:
+
+```sh
+td-tl-gen --schema cached/api.tl --mtproto-schema cached/mtproto.tl \
+          --output ./MyProject/Generated --namespace MyProject.Serialization \
+          --overrides my-overrides.toml --target cid types writers
+```
+
+Commit the generated `.g.fs` files into your project. Use
+`samples/SedBotOverrides/sedbot-overrides.toml` in the
+[TDesu.Telegram.MTProto](https://github.com/techiedesu/TDesu.Telegram.MTProto)
+repo as a worked example for a Telegram server with dual-layer support.
+
+If you depended on `TlSharedTypes` (`PeerType`, `MediaInfo`, etc.), copy the
+file from the v0.2.0 git history into your own project — they're SedBot
+domain types, not generic TL primitives.
+
+### Kept
+
+The library is now ~600 LOC of pure runtime:
+
+- `TlReadBuffer` / `TlWriteBuffer` — pooled binary primitives
+- `TlBuilder` — `tl {}` / `tlPooled {}` / `tlInto {}` computation expression
+- `TlWriters.writeVectorHeader` — the only generic helper, self-contained
+
+Tests: 35 across primitives, vector, and the builder CE.
+
+---
+
 ## 0.2.0
 
 **Breaking changes** — removes consumer-specific helpers that were embedded in the

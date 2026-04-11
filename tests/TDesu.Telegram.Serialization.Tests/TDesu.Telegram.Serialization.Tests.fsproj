@@ -9,11 +9,6 @@
         <Compile Include="Serialization\PrimitiveTests.fs" />
         <Compile Include="Serialization\VectorTests.fs" />
         <Compile Include="Serialization\TlBuilderTests.fs" />
-        <Compile Include="Serialization\TlUserTests.fs" />
-        <Compile Include="Serialization\TlMessageTests.fs" />
-        <Compile Include="Serialization\TlChatTests.fs" />
-        <Compile Include="Serialization\TlRoundTripTests.fs" />
-        <Compile Include="Serialization\GeneratedRoundTripTests.g.fs" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\TDesu.Telegram.Serialization\TDesu.Telegram.Serialization.fsproj" />

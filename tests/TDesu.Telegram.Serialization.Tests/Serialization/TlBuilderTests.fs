@@ -12,12 +12,12 @@ type TlBuilderTests() =
     member _.``cid + int32 round-trip``() =
         let expected =
             use w = new TlWriteBuffer()
-            w.WriteConstructorId(GeneratedCid.PeerUser)
+            w.WriteConstructorId(0x9db1bc6du)
             w.WriteInt32(42)
             w.ToArray()
 
         let actual = tl {
-            cid GeneratedCid.PeerUser
+            cid 0x9db1bc6du
             int32 42
         }
 
@@ -44,7 +44,7 @@ type TlBuilderTests() =
     member _.``emptyVector writes vector cid + count 0``() =
         let expected =
             use w = new TlWriteBuffer()
-            w.WriteConstructorId(GeneratedCid.VectorCid)
+            w.WriteConstructorId(0x1cb5c415u)
             w.WriteInt32(0)
             w.ToArray()
 
@@ -58,13 +58,13 @@ type TlBuilderTests() =
     member _.``flags with no optionals``() =
         let expected =
             use w = new TlWriteBuffer()
-            w.WriteConstructorId(GeneratedCid.PeerUser)
+            w.WriteConstructorId(0x9db1bc6du)
             w.WriteInt32(0) // flags = 0
             w.WriteInt32(7)
             w.ToArray()
 
         let actual = tl {
-            cid GeneratedCid.PeerUser
+            cid 0x9db1bc6du
             flags
             optInt32 0 None
             optString 1 None
@@ -78,7 +78,7 @@ type TlBuilderTests() =
     member _.``flags with some optionals``() =
         let expected =
             use w = new TlWriteBuffer()
-            w.WriteConstructorId(GeneratedCid.PeerUser)
+            w.WriteConstructorId(0x9db1bc6du)
             let flagsValue = (1 <<< 0) ||| (1 <<< 2)
             w.WriteInt32(flagsValue)
             w.WriteInt32(42)
@@ -86,7 +86,7 @@ type TlBuilderTests() =
             w.ToArray()
 
         let actual = tl {
-            cid GeneratedCid.PeerUser
+            cid 0x9db1bc6du
             flags
             optInt32 0 (Some 42)
             optBool 1 None
@@ -215,14 +215,14 @@ type TlBuilderTests() =
             let flagsVal = (1 <<< 0) ||| (1 <<< 2)
             w.WriteInt32(flagsVal)
             w.WriteRawBytes(rawData)
-            w.WriteConstructorId(GeneratedCid.BoolTrue)
+            w.WriteConstructorId(0x997275b5u)
             w.ToArray()
 
         let actual = tl {
             flags
             optRaw 0 (Some rawData)
             optInt64 1 None
-            optCid 2 (Some GeneratedCid.BoolTrue)
+            optCid 2 (Some 0x997275b5u)
             flagsEnd
         }
 
@@ -239,24 +239,6 @@ type TlBuilderTests() =
 
         let actual = tl {
             raw data
-        }
-
-        equals actual expected
-
-    [<Test>]
-    member _.``write with TlChat.serialize helper``() =
-        let chat: TlChat = {
-            ChatId = 100L; Title = "Test Chat"
-            MembersCount = 3; Date = 1000; Photo = None
-        }
-
-        let expected =
-            use w = new TlWriteBuffer()
-            TlChat.serialize w chat
-            w.ToArray()
-
-        let actual = tl {
-            write (fun w -> TlChat.serialize w chat)
         }
 
         equals actual expected
@@ -282,7 +264,7 @@ type TlBuilderTests() =
     member _.``mixed cid + write + int32 interleaving``() =
         let expected =
             use w = new TlWriteBuffer()
-            w.WriteConstructorId(GeneratedCid.Updates)
+            w.WriteConstructorId(0xed18c118u)
             TlWriters.writeVectorHeader w 0
             TlWriters.writeVectorHeader w 0
             TlWriters.writeVectorHeader w 0
@@ -291,7 +273,7 @@ type TlBuilderTests() =
             w.ToArray()
 
         let actual = tl {
-            cid GeneratedCid.Updates
+            cid 0xed18c118u
             emptyVector
             emptyVector
             emptyVector

@@ -24,15 +24,7 @@
         <Compile Include="TlWriteBuffer.fs" />
         <Compile Include="TlBuilder.fs" />
         <Compile Include="TlReadBuffer.fs" />
-        <Compile Include="GeneratedCid.g.fs" />
-        <Compile Include="GeneratedLayerAliases.g.fs" />
-        <Compile Include="TlSharedTypes.fs" />
-        <Compile Include="GeneratedTlTypes.g.fs" />
-        <Compile Include="GeneratedTlRequests.g.fs" />
-        <Compile Include="GeneratedTlWriters.g.fs" />
         <Compile Include="TlWriters.fs" />
-        <Compile Include="GeneratedCoverageValidator.g.fs" />
-        <Compile Include="GeneratedReturnTypes.g.fs" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="TDesu.FSharp" />
