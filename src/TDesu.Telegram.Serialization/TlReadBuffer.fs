@@ -70,6 +70,13 @@ type TlReadBuffer(data: byte[]) =
         if ctorId <> TlConstants.VectorConstructorId then
             invalidOp $"Expected vector constructor id 0x1cb5c415, got 0x%08X{ctorId}"
         let count = this.ReadInt32()
+        let remaining = data.Length - pos
+        // A TL element is never smaller than 4 bytes, so a count over remaining/4 cannot be
+        // honest; catching it here avoids Array.init allocating gigabytes for a lying count
+        // (measured: 200_000_000 declared elements over a 12-byte body allocated ~1.5 GiB
+        // before failing, against a 0.3.0 baseline).
+        if count < 0 || count > remaining / 4 then
+            raise (ArgumentOutOfRangeException("count", count, $"Vector declares {count} elements but only {remaining} bytes remain in the buffer"))
         Array.init count (fun _ -> readItem this)
 
     member _.ReadRawBytes(count: int) : byte[] =

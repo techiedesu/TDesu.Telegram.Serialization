@@ -60,3 +60,18 @@ type VectorTests() =
         // First 4 bytes should be vector constructor id 0x1cb5c415
         let constructorId = System.BitConverter.ToUInt32(data, 0)
         equals constructorId 0x1cb5c415u
+
+    [<Test>]
+    member _.``ReadVector rejects a lying count without allocating``() =
+        // Body: vector ctor id (4 bytes) + a count claiming 200_000_000 elements (4 bytes),
+        // with zero element bytes following - the reported repro underrun shape.
+        use w = new TlWriteBuffer()
+        w.WriteConstructorId(0x1cb5c415u)
+        w.WriteInt32(200_000_000)
+        let data = w.ToArray()
+
+        use r = new TlReadBuffer(data)
+        let ex = Assert.Throws<System.ArgumentOutOfRangeException>(fun () ->
+            r.ReadVector(fun r -> r.ReadInt32()) |> ignore)
+        Assert.That(ex.Message, Does.Contain("200000000"))
+        Assert.That(ex.Message, Does.Contain("0 bytes remain"))
