@@ -65,13 +65,13 @@ td-tl-gen --schema cached/api.tl --mtproto-schema cached/mtproto.tl \
 ```
 
 Commit the generated `.g.fs` files into your project. Use
-`samples/SedBotOverrides/sedbot-overrides.toml` in the
+`samples/ServerOverrides/server-overrides.toml` in the
 [TDesu.Telegram.MTProto](https://github.com/techiedesu/TDesu.Telegram.MTProto)
 repo as a worked example for a Telegram server with dual-layer support.
 
 If you depended on `TlSharedTypes` (`PeerType`, `MediaInfo`, etc.), copy the
-file from the v0.2.0 git history into your own project — they're SedBot
-domain types, not generic TL primitives.
+file from the v0.2.0 git history into your own project — they're one
+server's domain types, not generic TL primitives.
 
 ### Kept
 
@@ -144,7 +144,7 @@ as needed; everything was previously under `namespace TDesu.Serialization`.
 
 ## 0.1.0
 
-Initial release. Extracted from SedBot MTProto server.
+Initial release. Extracted from a Telegram MTProto server implementation.
 
 ### Core
 - TlWriteBuffer: pooled resizable write buffer (ArrayPool-backed)
