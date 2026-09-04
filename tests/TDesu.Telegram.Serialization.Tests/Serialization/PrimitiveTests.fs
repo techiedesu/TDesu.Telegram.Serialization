@@ -166,3 +166,37 @@ type PrimitiveTests() =
         equals (r.ReadInt64()) 999L
         Assert.That(r.ReadBool(), Is.True)
         equals (r.ReadBytes()) [| 0xAAuy; 0xBBuy |]
+
+    // A truncated frame used to read back silently: F# array slicing clamps, so a declared length
+    // the buffer could not hold returned the tail that was there and left the cursor past the end.
+    // Each of these fails against 0.3.1 with a short array instead of an exception.
+
+    [<Test>]
+    member _.``ReadBytes rejects a length the buffer cannot hold``() =
+        // Length prefix says 10, three payload bytes follow.
+        use r = new TlReadBuffer([| 10uy; 1uy; 2uy; 3uy |])
+        let ex = Assert.Throws<System.ArgumentOutOfRangeException>(fun () -> r.ReadBytes() |> ignore)
+        Assert.That(ex.Message, Does.Contain("10 bytes at position 1"))
+
+    [<Test>]
+    member _.``ReadRawBytes rejects an overrun and a negative count``() =
+        use r = new TlReadBuffer([| 1uy; 2uy |])
+        Assert.Throws<System.ArgumentOutOfRangeException>(fun () -> r.ReadRawBytes(16) |> ignore) |> ignore
+        equals r.Position 0
+        Assert.Throws<System.ArgumentOutOfRangeException>(fun () -> r.ReadRawBytes(-3) |> ignore) |> ignore
+        equals r.Position 0
+        equals (r.ReadRawBytes(2)) [| 1uy; 2uy |]
+
+    [<Test>]
+    member _.``ReadInt256 rejects a short buffer``() =
+        use r = new TlReadBuffer(Array.zeroCreate 31)
+        Assert.Throws<System.ArgumentOutOfRangeException>(fun () -> r.ReadInt256() |> ignore) |> ignore
+        use ok = new TlReadBuffer(Array.zeroCreate 32)
+        equals (ok.ReadInt256().Length) 32
+
+    [<Test>]
+    member _.``Skip rejects overrunning the buffer but allows reaching its end``() =
+        use r = new TlReadBuffer([| 1uy; 2uy; 3uy; 4uy |])
+        Assert.Throws<System.ArgumentOutOfRangeException>(fun () -> r.Skip(5)) |> ignore
+        r.Skip(4)
+        Assert.That(r.HasMore, Is.False)

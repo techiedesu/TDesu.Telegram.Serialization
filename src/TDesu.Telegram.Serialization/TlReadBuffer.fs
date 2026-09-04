@@ -7,6 +7,26 @@ open System.Text
 type TlReadBuffer(data: byte[]) =
     let mutable pos = 0
 
+    /// Every variable-length read goes through here. F# array slicing clamps an out-of-range
+    /// slice instead of throwing, so `data[pos .. pos + count - 1]` over a short buffer used to
+    /// hand back whatever was left and still advance the cursor by the declared count: a TL
+    /// `bytes` of length 10 over a 3-byte tail read as 3 bytes with the position at 12 of 4, and
+    /// a negative count moved the cursor backwards (measured against 0.3.1). Nothing downstream
+    /// can tell a truncated value from a real one, so the shortfall has to be raised here.
+    let take (count: int) : byte[] =
+        if count < 0 || count > data.Length - pos then
+            raise (
+                ArgumentOutOfRangeException(
+                    "count",
+                    count,
+                    $"Read of {count} bytes at position {pos} overruns the {data.Length}-byte buffer"
+                )
+            )
+
+        let result = data[pos .. pos + count - 1]
+        pos <- pos + count
+        result
+
     member _.ReadInt32() : int32 =
         let v = BinaryPrimitives.ReadInt32LittleEndian(ReadOnlySpan(data, pos, 4))
         pos <- pos + 4
@@ -22,15 +42,9 @@ type TlReadBuffer(data: byte[]) =
         pos <- pos + 8
         BitConverter.Int64BitsToDouble(v)
 
-    member _.ReadInt128() : byte[] =
-        let result = data[pos .. pos + 15]
-        pos <- pos + 16
-        result
+    member _.ReadInt128() : byte[] = take 16
 
-    member _.ReadInt256() : byte[] =
-        let result = data[pos .. pos + 31]
-        pos <- pos + 32
-        result
+    member _.ReadInt256() : byte[] = take 32
 
     member _.ReadConstructorId() : uint32 =
         let v = BinaryPrimitives.ReadUInt32LittleEndian(ReadOnlySpan(data, pos, 4))
@@ -42,16 +56,14 @@ type TlReadBuffer(data: byte[]) =
         pos <- pos + 1
         if firstByte < 254 then
             let len = firstByte
-            let result = data[pos .. pos + len - 1]
-            pos <- pos + len
+            let result = take len
             let padding = (4 - (1 + len) % 4) % 4
             pos <- pos + padding
             result
         else
             let len = int data[pos] ||| (int data[pos + 1] <<< 8) ||| (int data[pos + 2] <<< 16)
             pos <- pos + 3
-            let result = data[pos .. pos + len - 1]
-            pos <- pos + len
+            let result = take len
             let padding = (4 - (4 + len) % 4) % 4
             pos <- pos + padding
             result
@@ -79,16 +91,24 @@ type TlReadBuffer(data: byte[]) =
             raise (ArgumentOutOfRangeException("count", count, $"Vector declares {count} elements but only {remaining} bytes remain in the buffer"))
         Array.init count (fun _ -> readItem this)
 
-    member _.ReadRawBytes(count: int) : byte[] =
-        let result = data[pos .. pos + count - 1]
-        pos <- pos + count
-        result
+    member _.ReadRawBytes(count: int) : byte[] = take count
 
     member _.Position
         with get() = pos
         and set(v) = pos <- v
 
-    member _.Skip(count: int) = pos <- pos + count
+    /// Same bound as a read: skipping past the end is a malformed frame, not an empty one.
+    member _.Skip(count: int) =
+        if count < 0 || count > data.Length - pos then
+            raise (
+                ArgumentOutOfRangeException(
+                    "count",
+                    count,
+                    $"Skip of {count} bytes at position {pos} overruns the {data.Length}-byte buffer"
+                )
+            )
+
+        pos <- pos + count
 
     member _.Length : int = data.Length
 

@@ -1,3 +1,30 @@
+## 0.3.2
+
+**A short buffer now raises instead of reading back truncated.** F# array slicing clamps an
+out-of-range slice rather than throwing, and every variable-length read in `TlReadBuffer` was a
+slice: a TL `bytes` declaring 10 over a 3-byte tail returned those 3 bytes with the cursor at 12 of
+4, `ReadInt256` over 31 bytes returned 31, and `ReadRawBytes(-3)` returned nothing and moved the
+cursor *backwards* — all measured against 0.3.1. Nothing downstream can tell such a value from a real
+one, which is how a truncated frame becomes a wrong auth key or an empty file reference instead of
+an error.
+
+`ReadBytes`, `ReadRawBytes`, `ReadInt128`, `ReadInt256` and `Skip` now go through one bounds check
+and raise `ArgumentOutOfRangeException` naming the count, the position and the buffer length, with
+the cursor left where it was. The fixed-width reads were already safe: `ReadOnlySpan(data, pos, n)`
+validates its own range. Reaching exactly the end stays allowed. Pinned by four tests that fail
+against the unfixed buffer.
+
+Also: a `nuget.config` pinning nuget.org as the only source — with central package management,
+a user-level config listing several feeds fails the restore with NU1507 — and `global.json` rolls
+forward to the latest 10.0 feature band, matching the `10.0.x` CI uses.
+
+## 0.3.1
+
+**`ReadVector` rejects a count the buffer cannot hold.** A TL element is never smaller than 4 bytes,
+so a declared count above `remaining / 4` cannot be honest; it now raises before `Array.init`
+allocates for it. Measured: 200,000,000 declared elements over a 12-byte body allocated ~1.5 GiB
+before failing on 0.3.0.
+
 ## 0.3.0
 
 **Breaking changes** — removes the schema-pinned generated code that 0.2.0
