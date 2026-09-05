@@ -1,16 +1,9 @@
 namespace TDesu.Serialization
 
-/// <summary>
-/// The three lines every generated <c>Serialize</c> call site was retyping:
-/// rent a <see cref="TlWriteBuffer"/>, write into it, copy the result out, dispose it.
-/// </summary>
-/// <remarks>
-/// Every consumer of a generated TL type ended up writing
-/// <c>use w = new TlWriteBuffer()</c> / <c>X.Serialize(w, v)</c> / <c>w.ToArray()</c> at each of
-/// its own request sites — one project counted 11 copies of exactly that plus one private SRTP
-/// helper reproducing <c>bytesOf</c> — because this package provided the buffer but not the
-/// pattern of using it once and giving it back.
-/// </remarks>
+/// The three lines every generated `Serialize` call site was retyping: rent a `TlWriteBuffer`,
+/// write into it, copy the result out, give it back. One consumer counted 11 copies of exactly that
+/// plus a private SRTP helper reproducing `bytesOf`, because this package provided the pooled buffer
+/// but never the pattern of using it once and returning it.
 [<RequireQualifiedAccess>]
 module Tl =
     /// Runs `write` against a fresh pooled `TlWriteBuffer` and returns the bytes it produced.
