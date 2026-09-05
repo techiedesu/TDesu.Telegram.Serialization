@@ -1,3 +1,20 @@
+## 0.4.1
+
+**`Tl.build`/`Tl.bytesOf` replace the three-line dance every generated `Serialize` call site was
+repeating.** Every consumer of a generated TL type ended up writing
+`use w = new TlWriteBuffer()` / `X.Serialize(w, v)` / `w.ToArray()` at each of its own request
+sites — one project counted 11 copies of exactly that, plus a private SRTP helper reproducing
+`bytesOf`, because this package provided the pooled buffer but never the pattern of using one and
+giving it back. `Tl.build write` runs `write` against a fresh pooled writer and returns
+`ToArray()`, disposing the writer (`use`) whether or not `write` throws. `Tl.bytesOf value` is
+`build (fun w -> T.Serialize(w, value))` for `value`'s own type, picked up via an SRTP constraint
+(`static member Serialize: TlWriteBuffer * ^T -> unit`) rather than an interface, since generated
+TL types share no common base to implement one against.
+
+### Added
+- `Tl.build (write: TlWriteBuffer -> unit) : byte[]`
+- `Tl.bytesOf (value: ^T) : byte[]` — inline, constrained to `^T` having a static `Serialize`
+
 ## 0.4.0
 
 **Every malformed read now raises one exception, and reading no longer requires an unused

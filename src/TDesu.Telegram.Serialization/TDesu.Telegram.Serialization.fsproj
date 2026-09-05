@@ -22,6 +22,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="TlWriteBuffer.fs" />
+        <Compile Include="Tl.fs" />
         <Compile Include="TlReadBuffer.fs" />
         <Compile Include="TlWriters.fs" />
     </ItemGroup>

@@ -53,6 +53,27 @@ Also: `WriteInt128`, `WriteInt256`, `WriteDouble`, `WriteVector`.
 more — the extended length header only has 24 bits, so anything at or past that boundary cannot
 be encoded and is rejected rather than silently wrapped.
 
+## Tl.build / Tl.bytesOf
+
+The three lines every generated `Serialize` call site was retyping — rent a `TlWriteBuffer`,
+write into it, copy the result out, dispose it:
+
+```fsharp
+open TDesu.Serialization
+
+let bytes = Tl.build (fun w ->
+    w.WriteInt32(42)
+    w.WriteString("hello"))
+
+// For a generated type exposing `static member Serialize: TlWriteBuffer * ^T -> unit`:
+let requestBytes = Tl.bytesOf someGeneratedRequest
+```
+
+`bytesOf value` is exactly `build (fun w -> T.Serialize(w, value))` for `value`'s own type `T`,
+picked up via an SRTP constraint rather than an interface — generated TL types have no common
+base to implement one against. One project counted 11 hand-written copies of this pattern plus a
+private SRTP helper reproducing `bytesOf` before this existed.
+
 ## TlReadBuffer
 
 Stateful reader over a `byte[]`, or a bounded view over part of one. Not `IDisposable` — it owns

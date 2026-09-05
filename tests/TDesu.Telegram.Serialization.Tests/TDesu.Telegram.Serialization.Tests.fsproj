@@ -7,6 +7,7 @@
     <ItemGroup>
         <Compile Include="TestHelpers.fs" />
         <Compile Include="Serialization\PrimitiveTests.fs" />
+        <Compile Include="Serialization\TlTests.fs" />
         <Compile Include="Serialization\VectorTests.fs" />
         <Compile Include="Serialization\TlReadBufferTests.fs" />
         <Compile Include="Serialization\TlWriteBufferTests.fs" />
