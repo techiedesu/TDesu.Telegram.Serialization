@@ -6,5 +6,5 @@ module TlWriters =
 
     /// Write the standard TL vector constructor (`0x1cb5c415`) followed by `count`.
     let writeVectorHeader (w: TlWriteBuffer) (count: int) =
-        w.WriteConstructorId(0x1cb5c415u)
+        w.WriteConstructorId(TlConstants.VectorConstructorId)
         w.WriteInt32(count)

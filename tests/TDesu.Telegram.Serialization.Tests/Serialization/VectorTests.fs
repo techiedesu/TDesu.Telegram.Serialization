@@ -14,7 +14,7 @@ type VectorTests() =
         w.WriteVector(items, fun w v -> w.WriteInt32(v))
         let data = w.ToArray()
 
-        use r = new TlReadBuffer(data)
+        let r = new TlReadBuffer(data)
         let result = r.ReadVector(fun r -> r.ReadInt32())
         equals result items
 
@@ -25,7 +25,7 @@ type VectorTests() =
         w.WriteVector(items, fun w v -> w.WriteInt64(v))
         let data = w.ToArray()
 
-        use r = new TlReadBuffer(data)
+        let r = new TlReadBuffer(data)
         let result = r.ReadVector(fun r -> r.ReadInt64())
         equals result items
 
@@ -36,7 +36,7 @@ type VectorTests() =
         w.WriteVector(items, fun w v -> w.WriteInt32(v))
         let data = w.ToArray()
 
-        use r = new TlReadBuffer(data)
+        let r = new TlReadBuffer(data)
         let result = r.ReadVector(fun r -> r.ReadInt32())
         Assert.That(result, Is.Empty)
 
@@ -47,7 +47,7 @@ type VectorTests() =
         w.WriteVector(items, fun w v -> w.WriteString(v))
         let data = w.ToArray()
 
-        use r = new TlReadBuffer(data)
+        let r = new TlReadBuffer(data)
         let result = r.ReadVector(fun r -> r.ReadString())
         equals result items
 
@@ -70,8 +70,18 @@ type VectorTests() =
         w.WriteInt32(200_000_000)
         let data = w.ToArray()
 
-        use r = new TlReadBuffer(data)
-        let ex = Assert.Throws<System.ArgumentOutOfRangeException>(fun () ->
+        let r = new TlReadBuffer(data)
+        let ex = Assert.Throws<TlFormatException>(fun () ->
             r.ReadVector(fun r -> r.ReadInt32()) |> ignore)
         Assert.That(ex.Message, Does.Contain("200000000"))
         Assert.That(ex.Message, Does.Contain("0 bytes remain"))
+
+    [<Test>]
+    member _.``ReadVector rejects an unknown constructor id``() =
+        use w = new TlWriteBuffer()
+        w.WriteConstructorId(0xDEADBEEFu)
+        let data = w.ToArray()
+
+        let r = new TlReadBuffer(data)
+        Assert.Throws<TlFormatException>(fun () -> r.ReadVector(fun r -> r.ReadInt32()) |> ignore)
+        |> ignore

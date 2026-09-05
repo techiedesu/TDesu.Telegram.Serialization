@@ -1,3 +1,84 @@
+## 0.4.0
+
+**Every malformed read now raises one exception, and reading no longer requires an unused
+`IDisposable`.** `TlReadBuffer` mixed `ArgumentOutOfRangeException` (the shared bounds check in
+`take`), `IndexOutOfRangeException` (`ReadBytes`'s own unchecked prefix read) and
+`InvalidOperationException` (`ReadBool`/`ReadVector`) for the same underlying problem — a length,
+count or constructor id the buffer cannot honour — so a caller could not catch "this frame is
+malformed" in one place. `ReadBytes` also advanced `Position` past its length prefix *before*
+validating the payload length, so a short buffer left the cursor mid-value instead of where the
+read began, and the padding skip that followed a successful read had no bound at all. Both are
+fixed together: one `TlFormatException` for every malformed read, and `ReadBytes` restores
+`Position` on failure with its padding skip going through the same bounds check as everything
+else.
+
+`TlReadBuffer` also drops `IDisposable` — its `Dispose()` was empty, and it forced
+`use r = new TlReadBuffer(...)` at all 52 call sites the audit counted across the two consumers,
+for a type that owns no resource to release.
+
+### Added
+- `TlReadBuffer(data, offset, count)` — a bounds-checked view over part of an existing array,
+  instead of every nested TL payload being sliced into a fresh one first
+- `TlReadBuffer.Slice(count)` — a second reader over the *same* array, advancing this one past it
+- `TlReadBuffer.ReadSpan(count)` — the next `count` bytes as a `ReadOnlySpan<byte>`, no allocation
+- `TlReadBuffer.PeekConstructorId()` / `TryPeekConstructorId()` — read the next constructor id
+  without consuming it, bounded (the first raises, the second returns `ValueNone`); five call
+  sites across the two consumers were hand-rolling this with `BitConverter`, two of them inside
+  the client that forbids exactly that
+- `TlReadBuffer.Remaining` — bytes left in this reader's view
+- `TlWriteBuffer.WriteRawBytes(ReadOnlySpan<byte>)` alongside the existing `byte[]` overload
+- `TlConstants` is now public, so the vector/bool constructor ids and the new
+  `TlConstants.MaxByteLength` have one canonical source instead of being retyped at call sites
+  outside this assembly
+
+### Changed
+- `TlReadBuffer.ReadString` decodes straight from the span instead of allocating a `byte[]` via
+  `ReadBytes` first — `Encoding.UTF8.GetString(ReadOnlySpan<byte>)` has been available since
+  netstandard2.1, which this package already targets
+- `TlReadBuffer.Position`'s setter is range-checked (`[0, Length]`) — an out-of-range value used
+  to reopen the truncation `take` exists to prevent, by making the remaining-bytes computation
+  wrong
+- `TlWriteBuffer.WriteString` is rewritten: 0.3.2 rented a pool buffer for every string under 256
+  UTF-8 bytes purely to hold the encoded bytes long enough to copy them a second time, and its
+  long-form branch (kept for a string whose encoding needed more than that) was dead code —
+  `GetMaxByteCount` only exceeds 256 past 84 three-byte UTF-8 characters, 252 encoded bytes,
+  still under the rental cap. `GetByteCount` sizes the header once and `GetBytes` encodes
+  straight into the buffer, and the header-writing logic is now shared with `WriteBytes` instead
+  of duplicated
+- `TlWriteBuffer.WriteBytes`/`WriteString` raise `ArgumentException` for a length of 2^24 bytes or
+  more instead of silently wrapping the 24-bit length field
+- Buffers returned to `ArrayPool` are cleared (`clearArray: true`) — a buffer a writer just grew
+  away from, or disposed, can still hold a session key or a plaintext body from whatever was
+  serialised into it
+- `TDesu.FSharp` bumped to 2.0.0. `Guard` replaces the hand-written argument checks (constructor
+  bounds, `Position`'s range, the length guards); `Bytes.slice` from `TDesu.FSharp.Buffers`
+  replaces the F# array-slice copy in every variable-length read; `ArrayPool.rentBytes` replaces
+  the direct `ArrayPool<byte>.Shared.Rent` calls
+
+### Removed
+- `TlReadBuffer : IDisposable` — see above
+- `TlBuilder.fs` in full: the `tl { }` / `tlPooled { }` / `tlInto { }` computation expression,
+  `PooledBytes`, `DetachBuffer`, `StreamPosition`, `PatchInt32`. None had a consumer in the
+  MTProto client or TeleEye (counted), the README's own `tlPooled { … }` / `tlInto w { … }`
+  examples could not compile (`tl`'s custom operations build an action list; `Run` returns
+  `byte[]`, so the list value the CE's `Yield` produces was never reachable through them), and
+  `PooledBytes.Return` was a double-return footgun advertised as the headline feature
+
+### Migration
+- `use r = new TlReadBuffer(...)` becomes `let r = new TlReadBuffer(...)` — the type no longer
+  needs disposing
+- A `tl { }` block becomes the same calls against a `TlWriteBuffer` directly: `flags`/`flagsEnd`/
+  `optX` become an `if`/`match` around the flags `int32` and each optional field's own `WriteX`
+  call, matching how the mandatory fields were already written
+
+### Tests
+- A round-trip property test (FsCheck) for `WriteBytes`/`ReadBytes` and `WriteString`/`ReadString`
+  against random input, sized so the generator regularly crosses the 254-byte extended-length
+  threshold, plus exact examples at that threshold and at the 2^24 length-guard boundary on both
+  sides. `TlBuilderTests` (16 tests) is gone with `TlBuilder.fs`; the suite now also covers the
+  `(data, offset, count)` view, `Slice`, `ReadSpan`, `Peek`/`TryPeekConstructorId`, and that every
+  malformed read raises `TlFormatException` and nothing else. 40 tests to 50
+
 ## 0.3.2
 
 **A short buffer now raises instead of reading back truncated.** F# array slicing clamps an

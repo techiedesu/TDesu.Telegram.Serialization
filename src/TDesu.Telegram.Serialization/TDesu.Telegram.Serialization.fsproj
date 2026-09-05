@@ -3,7 +3,7 @@
         <TargetFramework>netstandard2.1</TargetFramework>
         <RootNamespace>TDesu.Serialization</RootNamespace>
         <Authors>TDesu</Authors>
-        <Description>TL (Type Language) binary serialization for Telegram MTProto: pooled buffers, computation expression builder, typed parsers, generated types.</Description>
+        <Description>TL (Type Language) binary serialization for Telegram MTProto: pooled buffers, a stateless reader/writer over the wire format.</Description>
         <PackageTags>fsharp;telegram;mtproto;tl;serialization</PackageTags>
         <PackageLicenseExpression>Unlicense</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/techiedesu/TDesu.Telegram.Serialization</PackageProjectUrl>
@@ -22,7 +22,6 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="TlWriteBuffer.fs" />
-        <Compile Include="TlBuilder.fs" />
         <Compile Include="TlReadBuffer.fs" />
         <Compile Include="TlWriters.fs" />
     </ItemGroup>

@@ -8,7 +8,9 @@
         <Compile Include="TestHelpers.fs" />
         <Compile Include="Serialization\PrimitiveTests.fs" />
         <Compile Include="Serialization\VectorTests.fs" />
-        <Compile Include="Serialization\TlBuilderTests.fs" />
+        <Compile Include="Serialization\TlReadBufferTests.fs" />
+        <Compile Include="Serialization\TlWriteBufferTests.fs" />
+        <Compile Include="Serialization\RoundTripPropertyTests.fs" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\TDesu.Telegram.Serialization\TDesu.Telegram.Serialization.fsproj" />
@@ -19,6 +21,5 @@
         <PackageReference Include="NUnit3TestAdapter" />
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="FsCheck" />
-        <PackageReference Include="FsCheck.NUnit" />
     </ItemGroup>
 </Project>
