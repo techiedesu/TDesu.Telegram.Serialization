@@ -74,3 +74,25 @@ type TlWriteBufferTests() =
         equals TlConstants.BoolTrue 0x997275b5u
         equals TlConstants.BoolFalse 0xbc799737u
         equals TlConstants.VectorConstructorId 0x1cb5c415u
+
+    // Disposal scrubs only what was written rather than the whole rented array, which is the
+    // cheaper half of the same guarantee: nothing this writer serialised -- a session key, a
+    // plaintext body -- may reach the next renter of that array.
+    [<Test>]
+    member _.``a disposed buffer leaves nothing of its contents in the pool``() =
+        let secret = Array.create 64 0xABuy
+        let rentedLength =
+            use w = new TlWriteBuffer()
+            w.WriteRawBytes secret
+            w.WriteRawBytes secret
+            w.Length
+
+        // The pool hands a freshly returned array back to the next request for its bucket, so
+        // this is the very array the writer just released.
+        let reused = System.Buffers.ArrayPool<byte>.Shared.Rent 256
+
+        try
+            let residue = reused |> Array.take rentedLength |> Array.filter ((<>) 0uy)
+            equals residue [||]
+        finally
+            System.Buffers.ArrayPool<byte>.Shared.Return reused

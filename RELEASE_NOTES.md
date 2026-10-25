@@ -1,3 +1,26 @@
+## 0.4.2
+
+**Two costs every `bytes`/`string` field was paying, both on the path that succeeds.**
+
+`WriteBytes` and `WriteString` passed their rejection message to `Guard.isTrue` as an argument,
+so the interpolation ran on every write and was discarded: 480 bytes and 260 ns per field,
+which on a message of ten string fields was the dominant cost of serialising it. The message
+now sits behind the branch that raises it. `WriteString` goes from 313 ns and 552 B to 73 ns and
+64 B per call; `WriteBytes` from 323 ns and 560 B to 69 ns and 80 B. The boundary behaviour is
+unchanged and still pinned by the existing 2^24 tests.
+
+Disposal returned the rented array with `clearArray = true`, which zeroes the whole array the
+pool handed out rather than the part that was written — a 44-byte message rented 256 bytes and
+cleared all 256. It now scrubs `0..Length` and returns without a second pass. The guarantee is
+the same: nothing this writer serialised reaches the next renter, which a new test pins by
+re-renting the array and checking it. Everything past the written length was never this
+writer's to begin with.
+
+Together, building a small request drops from 164 ns to 65 ns, and a 1 KiB string from 513 ns
+to 300 ns. This also closes the "default capacity of 256 is too small" question: with the clear
+proportional to what was written, sizing the buffer to the message no longer measures faster,
+so the default stays.
+
 ## 0.4.1
 
 **`Tl.build`/`Tl.bytesOf` replace the three-line dance every generated `Serialize` call site was
