@@ -183,6 +183,22 @@ type TlReadBuffer(data: byte[], offset: int, count: int) =
         elif ctorId = TlConstants.BoolFalse then false
         else raise (TlFormatException $"Unknown bool constructor id: 0x%08X{ctorId}")
 
+    /// A TL element is never smaller than 4 bytes, so a count over remaining/4 cannot be honest.
+    /// Shared by `ReadVector` and `ReadBareVector`: catching it here avoids `Array.init`
+    /// allocating gigabytes for a lying count (measured: 200_000_000 declared elements over a
+    /// 12-byte body allocated ~1.5 GiB before failing, against a 0.3.0 baseline), and rejects a
+    /// negative one outright instead of handing it to `Array.init` unexamined.
+    member private this.ReadValidatedElementCount() : int =
+        let itemCount = this.ReadInt32()
+
+        if itemCount < 0 || itemCount > (limit - pos) / 4 then
+            raise (
+                TlFormatException
+                    $"Vector declares {itemCount} elements but only {this.Remaining} bytes remain in the buffer"
+            )
+
+        itemCount
+
     /// Reads a TL `Vector<T>`: the vector constructor id, an element count, then `readItem`
     /// applied that many times.
     member this.ReadVector(readItem: TlReadBuffer -> 'a) : 'a[] =
@@ -191,18 +207,13 @@ type TlReadBuffer(data: byte[], offset: int, count: int) =
         if ctorId <> TlConstants.VectorConstructorId then
             raise (TlFormatException $"Expected vector constructor id 0x1cb5c415, got 0x%08X{ctorId}")
 
-        let itemCount = this.ReadInt32()
-        // A TL element is never smaller than 4 bytes, so a count over remaining/4 cannot be
-        // honest; catching it here avoids Array.init allocating gigabytes for a lying count
-        // (measured: 200_000_000 declared elements over a 12-byte body allocated ~1.5 GiB
-        // before failing, against a 0.3.0 baseline).
-        if itemCount < 0 || itemCount > (limit - pos) / 4 then
-            raise (
-                TlFormatException
-                    $"Vector declares {itemCount} elements but only {this.Remaining} bytes remain in the buffer"
-            )
+        Array.init (this.ReadValidatedElementCount()) (fun _ -> readItem this)
 
-        Array.init itemCount (fun _ -> readItem this)
+    /// Reads a TL "bare" `vector<T>`: an element count with no vector constructor id or element
+    /// framing of its own, unlike `Vector<T>` (`ReadVector`) -- the schema spells this with a
+    /// lowercase `vector<...>` type reference. Bounded exactly like `ReadVector`.
+    member this.ReadBareVector(readItem: TlReadBuffer -> 'a) : 'a[] =
+        Array.init (this.ReadValidatedElementCount()) (fun _ -> readItem this)
 
     /// Reads exactly `count` raw bytes with no TL framing (no length prefix, no padding).
     member _.ReadRawBytes(count: int) : byte[] = take count

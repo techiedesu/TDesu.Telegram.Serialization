@@ -1,3 +1,16 @@
+## Unreleased
+
+**`ReadBareVector` reads a TL "bare" `vector<T>` with the same bounds `ReadVector` already
+applies to `Vector<T>`.** A bare vector has no constructor id of its own on the wire -- only an
+element count -- so it needed its own method rather than reusing `ReadVector`, which the
+generator now has to call for a schema's lowercase `vector<...>` fields. Factored the shared
+bound (count must be non-negative and no larger than `remaining/4`, since no TL element is
+smaller than 4 bytes) into one private helper both methods call, so the two checks can't drift
+apart.
+
+### Added
+- `TlReadBuffer.ReadBareVector(readItem: TlReadBuffer -> 'a) : 'a[]`
+
 ## 0.4.2
 
 **Two costs every `bytes`/`string` field was paying, both on the path that succeeds.**

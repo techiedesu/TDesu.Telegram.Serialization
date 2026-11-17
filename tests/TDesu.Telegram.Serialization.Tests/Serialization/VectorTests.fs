@@ -85,3 +85,40 @@ type VectorTests() =
         let r = new TlReadBuffer(data)
         Assert.Throws<TlFormatException>(fun () -> r.ReadVector(fun r -> r.ReadInt32()) |> ignore)
         |> ignore
+
+    [<Test>]
+    member _.``ReadBareVector round-trips with no constructor id on the wire``() =
+        let items = [| 1; 2; 3 |]
+        use w = new TlWriteBuffer()
+        w.WriteInt32(items.Length)
+
+        for v in items do
+            w.WriteInt32(v)
+
+        let data = w.ToArray()
+        let r = new TlReadBuffer(data)
+        let result = r.ReadBareVector(fun r -> r.ReadInt32())
+        equals result items
+        Assert.That(r.HasMore, Is.False)
+
+    [<Test>]
+    member _.``ReadBareVector rejects a lying count without allocating``() =
+        use w = new TlWriteBuffer()
+        w.WriteInt32(200_000_000)
+        let data = w.ToArray()
+
+        let r = new TlReadBuffer(data)
+        let ex = Assert.Throws<TlFormatException>(fun () ->
+            r.ReadBareVector(fun r -> r.ReadInt32()) |> ignore)
+        Assert.That(ex.Message, Does.Contain("200000000"))
+
+    [<Test>]
+    member _.``ReadBareVector rejects a negative count``() =
+        use w = new TlWriteBuffer()
+        w.WriteInt32(-1)
+        let data = w.ToArray()
+
+        let r = new TlReadBuffer(data)
+        Assert.Throws<TlFormatException>(fun () -> r.ReadBareVector(fun r -> r.ReadInt32()) |> ignore)
+        |> ignore
+
