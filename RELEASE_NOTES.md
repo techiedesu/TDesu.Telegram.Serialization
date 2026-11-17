@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.3
 
 **`ReadBareVector` reads a TL "bare" `vector<T>` with the same bounds `ReadVector` already
 applies to `Vector<T>`.** A bare vector has no constructor id of its own on the wire -- only an
@@ -8,8 +8,13 @@ bound (count must be non-negative and no larger than `remaining/4`, since no TL 
 smaller than 4 bytes) into one private helper both methods call, so the two checks can't drift
 apart.
 
+**`EnterNested`/`LeaveNested` give self-referencing TL types a fixed nesting bound**
+(`MaxNestingDepth`, 64 levels per reader; one level past it raises `TlFormatException`). Code
+generators call them around the deserializer of a type that can contain itself.
+
 ### Added
 - `TlReadBuffer.ReadBareVector(readItem: TlReadBuffer -> 'a) : 'a[]`
+- `TlReadBuffer.EnterNested()`, `TlReadBuffer.LeaveNested()`, `TlReadBuffer.MaxNestingDepth`
 
 ## 0.4.2
 

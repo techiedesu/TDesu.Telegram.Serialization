@@ -110,3 +110,23 @@ type TlReadBufferTests() =
         let r = new TlReadBuffer(data)
         equals (r.TryPeekConstructorId ()) (ValueSome 0xABCDEF01u)
         equals r.Position 0
+
+    [<Test>]
+    member _.``EnterNested allows exactly MaxNestingDepth levels``() =
+        let r = new TlReadBuffer([||])
+
+        for _ in 1 .. TlReadBuffer.MaxNestingDepth do
+            r.EnterNested()
+
+        Assert.Throws<TlFormatException>(fun () -> r.EnterNested()) |> ignore
+
+    [<Test>]
+    member _.``LeaveNested returns the budget to the enclosing level``() =
+        let r = new TlReadBuffer([||])
+
+        for _ in 1 .. 3 * TlReadBuffer.MaxNestingDepth do
+            r.EnterNested()
+            r.LeaveNested()
+
+        for _ in 1 .. TlReadBuffer.MaxNestingDepth do
+            r.EnterNested()

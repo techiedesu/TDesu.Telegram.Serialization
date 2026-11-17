@@ -48,6 +48,7 @@ type TlReadBuffer(data: byte[], offset: int, count: int) =
 
     let limit = offset + count
     let mutable pos = offset
+    let mutable nesting = 0
 
     /// Every variable-length read bottoms out here. F# array slicing clamps an out-of-range
     /// slice instead of throwing, so `data[pos .. pos + n - 1]` over a short buffer used to hand
@@ -214,6 +215,22 @@ type TlReadBuffer(data: byte[], offset: int, count: int) =
     /// lowercase `vector<...>` type reference. Bounded exactly like `ReadVector`.
     member this.ReadBareVector(readItem: TlReadBuffer -> 'a) : 'a[] =
         Array.init (this.ReadValidatedElementCount()) (fun _ -> readItem this)
+
+    /// How deep a value of a self-referencing TL type (`RichText` inside `RichText`, `PageBlock`
+    /// inside `PageBlock`, `JSONValue` inside `JSONValue`) may nest within one reader. Real values
+    /// nest a handful of levels.
+    static member MaxNestingDepth: int = 64
+
+    /// Generated deserializers for self-referencing types call this on entry and `LeaveNested`
+    /// on exit, so nesting has a fixed bound instead of one set by the reading thread's stack.
+    member _.EnterNested() =
+        nesting <- nesting + 1
+
+        if nesting > TlReadBuffer.MaxNestingDepth then
+            raise (TlFormatException $"Value nests deeper than {TlReadBuffer.MaxNestingDepth} levels")
+
+    /// Pairs with `EnterNested`.
+    member _.LeaveNested() = nesting <- nesting - 1
 
     /// Reads exactly `count` raw bytes with no TL framing (no length prefix, no padding).
     member _.ReadRawBytes(count: int) : byte[] = take count
