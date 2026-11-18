@@ -1,3 +1,12 @@
+## 0.4.4
+
+**Depends on TDesu.FSharp 3.0.1** (was 2.0.0). The library uses only `Bytes.slice` from it,
+which is unchanged; consumers already on TDesu.FSharp 3.x no longer resolve this package
+against a major version it was not built with.
+
+### Changed
+- `TDesu.FSharp` 2.0.0 → 3.0.1.
+
 ## 0.4.3
 
 **`ReadBareVector` reads a TL "bare" `vector<T>` with the same bounds `ReadVector` already
